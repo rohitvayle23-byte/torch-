@@ -2,7 +2,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { MoodConfig } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || 'FAKE_API_KEY_FOR_DEVELOPMENT' });
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const getMoodConfig = async (prompt: string): Promise<MoodConfig> => {
   const response = await ai.models.generateContent({
