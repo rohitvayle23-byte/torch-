@@ -19,6 +19,7 @@ const App: React.FC = () => {
   const [moodConfig, setMoodConfig] = useState<MoodConfig | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [screenLightColor, setScreenLightColor] = useState("#ffffff");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Media references
   const streamRef = useRef<MediaStream | null>(null);
@@ -27,35 +28,71 @@ const App: React.FC = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
 
-  // Initialize camera for torch access
+  // Clear previous streams
+  const stopExistingMedia = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    trackRef.current = null;
+  };
+
+  // Initialize camera for torch access with robust fallbacks
   const initCamera = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' },
-        audio: mode === TorchMode.SOUND_REACTIVE 
-      });
+    setErrorMessage(null);
+    stopExistingMedia();
+
+    const tryGetMedia = async (constraints: MediaStreamConstraints) => {
+      try {
+        return await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (e) {
+        return null;
+      }
+    };
+
+    // Attempt 1: Back camera + Audio (if reactive)
+    let stream = await tryGetMedia({
+      video: { facingMode: 'environment' },
+      audio: mode === TorchMode.SOUND_REACTIVE
+    });
+
+    // Attempt 2: Back camera only (if audio failed)
+    if (!stream && mode === TorchMode.SOUND_REACTIVE) {
+      stream = await tryGetMedia({ video: { facingMode: 'environment' } });
+    }
+
+    // Attempt 3: Any camera (Generic fallback)
+    if (!stream) {
+      stream = await tryGetMedia({ video: true });
+    }
+
+    if (stream) {
       streamRef.current = stream;
       const track = stream.getVideoTracks()[0];
       trackRef.current = track;
       return track;
-    } catch (err) {
-      console.error("Camera access failed", err);
+    } else {
+      setErrorMessage("No camera found or access denied. Check permissions.");
       return null;
     }
   }, [mode]);
 
   const toggleTorch = async (state: boolean) => {
-    if (!trackRef.current) {
+    if (state && !trackRef.current) {
       const track = await initCamera();
       if (!track) return;
     }
 
+    if (!trackRef.current) return;
+
     try {
-      const capabilities = trackRef.current?.getCapabilities() as any;
+      const capabilities = trackRef.current.getCapabilities() as any;
       if (capabilities?.torch) {
-        await trackRef.current?.applyConstraints({
+        await trackRef.current.applyConstraints({
           advanced: [{ torch: state }]
         } as any);
+      } else if (state) {
+        setErrorMessage("Torch hardware not detected on this camera.");
       }
     } catch (e) {
       console.error("Torch toggle failed", e);
@@ -84,10 +121,10 @@ const App: React.FC = () => {
         toggleTorch(on);
       }, strobeSpeed);
     } else if (mode === TorchMode.SOS) {
-      // SOS: 3 short, 3 long, 3 short
       const pattern = [200, 200, 200, 200, 200, 500, 600, 200, 600, 200, 600, 500, 200, 200, 200, 200, 200, 1000];
       let step = 0;
       const runSOS = () => {
+        if (!isActive || mode !== TorchMode.SOS) return;
         const duration = pattern[step % pattern.length];
         const isOn = step % 2 === 0;
         toggleTorch(isOn);
@@ -95,28 +132,34 @@ const App: React.FC = () => {
         intervalRef.current = window.setTimeout(runSOS, duration);
       };
       runSOS();
-    } else if (mode === TorchMode.MORSE && morseText) {
-       // Logic handled via a specific sequence execution if needed, but for now we rely on user trigger
     } else if (mode === TorchMode.SOUND_REACTIVE) {
-      // Setup audio listener
       const setupAudio = async () => {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-        analyserRef.current = audioContextRef.current.createAnalyser();
-        const source = audioContextRef.current.createMediaStreamSource(stream);
-        source.connect(analyserRef.current);
-        analyserRef.current.fftSize = 256;
-        
-        const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-        const update = () => {
-          if (mode !== TorchMode.SOUND_REACTIVE || !isActive) return;
-          analyserRef.current?.getByteFrequencyData(dataArray);
-          const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-          // Threshold for flash
-          toggleTorch(average > 40);
-          requestAnimationFrame(update);
-        };
-        update();
+        try {
+          // If we already have a stream with audio, use it, else request it
+          let stream = streamRef.current;
+          if (!stream || stream.getAudioTracks().length === 0) {
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          }
+          
+          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+          analyserRef.current = audioContextRef.current.createAnalyser();
+          const source = audioContextRef.current.createMediaStreamSource(stream);
+          source.connect(analyserRef.current);
+          analyserRef.current.fftSize = 256;
+          
+          const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+          const update = () => {
+            if (mode !== TorchMode.SOUND_REACTIVE || !isActive) return;
+            analyserRef.current?.getByteFrequencyData(dataArray);
+            const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+            // Adaptive threshold
+            toggleTorch(average > 40);
+            requestAnimationFrame(update);
+          };
+          update();
+        } catch (err) {
+          setErrorMessage("Microphone access needed for Beat mode.");
+        }
       };
       setupAudio();
     }
@@ -133,8 +176,10 @@ const App: React.FC = () => {
       setMoodConfig(config);
       setScreenLightColor(config.color);
       setMode(TorchMode.MOOD);
+      setIsActive(true);
     } catch (e) {
       console.error(e);
+      setErrorMessage("AI mood failed to load.");
     } finally {
       setIsProcessing(false);
     }
@@ -145,11 +190,11 @@ const App: React.FC = () => {
     try {
       const code = await generateMorseCode(text);
       setMorseText(code);
-      // Play morse logic
+      setIsActive(true);
       const symbols = code.split("");
       let i = 0;
       const playNext = async () => {
-        if (i >= symbols.length || mode !== TorchMode.MORSE) {
+        if (i >= symbols.length || mode !== TorchMode.MORSE || !isActive) {
           toggleTorch(false);
           return;
         }
@@ -168,17 +213,21 @@ const App: React.FC = () => {
       playNext();
     } catch (e) {
       console.error(e);
+      setErrorMessage("Morse translation failed.");
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-between p-6 bg-slate-950 text-slate-100 transition-colors duration-500"
-         style={{ backgroundColor: mode === TorchMode.MOOD && isActive ? moodConfig?.color + "11" : undefined }}>
+    <div className="min-h-screen flex flex-col items-center justify-between p-6 bg-slate-950 text-slate-100 transition-colors duration-1000"
+         style={{ 
+           backgroundColor: mode === TorchMode.MOOD && isActive ? moodConfig?.color + "08" : undefined,
+           boxShadow: mode === TorchMode.MOOD && isActive ? `inset 0 0 100px ${moodConfig?.color}22` : 'none'
+         }}>
       
       {/* Header */}
-      <header className="w-full max-w-md flex justify-between items-center py-4">
+      <header className="w-full max-w-md flex justify-between items-center py-4 z-20">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-sky-500 flex items-center justify-center neon-glow">
             <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14H11V21L20 10H13Z"/></svg>
@@ -191,12 +240,19 @@ const App: React.FC = () => {
       </header>
 
       {/* Main Action Area */}
-      <main className="flex-1 w-full max-w-md flex flex-col items-center justify-center gap-8 py-8">
+      <main className="flex-1 w-full max-w-md flex flex-col items-center justify-center gap-8 py-8 z-10">
         
+        {/* Error Feedback */}
+        {errorMessage && (
+          <div className="w-full glass border-red-500/20 bg-red-500/5 px-4 py-2 rounded-xl text-center">
+            <p className="text-xs text-red-400 font-medium">{errorMessage}</p>
+          </div>
+        )}
+
         {/* Dynamic Visualizer based on Mode */}
         <div className="relative w-full aspect-square max-h-[300px] flex items-center justify-center">
           {mode === TorchMode.MOOD && isActive && moodConfig && (
-            <div className="absolute inset-0 rounded-full animate-pulse blur-3xl" style={{ backgroundColor: moodConfig.color, opacity: 0.3 }}></div>
+            <div className="absolute inset-0 rounded-full animate-pulse blur-3xl" style={{ backgroundColor: moodConfig.color, opacity: 0.2 }}></div>
           )}
           
           <TorchButton 
@@ -213,7 +269,7 @@ const App: React.FC = () => {
             <div className="glass rounded-2xl p-4 space-y-3">
               <div className="flex justify-between text-sm">
                 <span>Strobe Speed</span>
-                <span className="text-sky-400">{strobeSpeed}ms</span>
+                <span className="text-sky-400 font-mono">{strobeSpeed}ms</span>
               </div>
               <input 
                 type="range" min="50" max="2000" step="50"
@@ -242,18 +298,18 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Mode Selector Navigation (Sticky) */}
-      <nav className="w-full max-w-md pb-4">
-        <ModeSelector currentMode={mode} onModeChange={(m) => { setMode(m); setIsActive(false); }} />
+      {/* Mode Selector Navigation */}
+      <nav className="w-full max-w-md pb-4 z-20">
+        <ModeSelector currentMode={mode} onModeChange={(m) => { setMode(m); setIsActive(false); setErrorMessage(null); }} />
       </nav>
 
-      {/* Screen Light Layer (Fullscreen Overlay if requested) */}
-      {mode === TorchMode.MOOD && isActive && (
+      {/* Fullscreen Color Layer for Screen Light */}
+      {(mode === TorchMode.NORMAL || mode === TorchMode.MOOD) && isActive && (
         <div 
-          className="fixed inset-0 pointer-events-none transition-opacity duration-1000"
+          className="fixed inset-0 pointer-events-none transition-opacity duration-1000 z-0"
           style={{ 
-            background: `radial-gradient(circle at center, ${moodConfig?.color}22 0%, transparent 70%)`,
-            zIndex: -1
+            backgroundColor: mode === TorchMode.NORMAL ? screenLightColor : moodConfig?.color,
+            opacity: mode === TorchMode.NORMAL ? 0.05 : 0.03
           }}
         />
       )}
