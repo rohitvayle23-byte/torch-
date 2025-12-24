@@ -2,9 +2,8 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { MoodConfig } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export const getMoodConfig = async (prompt: string): Promise<MoodConfig> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: `Translate this mood into a lighting configuration: "${prompt}"`,
@@ -23,13 +22,15 @@ export const getMoodConfig = async (prompt: string): Promise<MoodConfig> => {
     }
   });
 
-  return JSON.parse(response.text);
+  const text = response.text || "{}";
+  return JSON.parse(text);
 };
 
 export const generateMorseCode = async (text: string): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: `Convert this text to standard Morse code (dots and dashes only, spaces between letters): "${text}"`,
   });
-  return response.text.trim();
+  return (response.text || "").trim();
 };
