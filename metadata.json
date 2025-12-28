@@ -1,6 +1,6 @@
 {
-  "name": "Lumina AI - The Ultimate Torch",
-  "description": "A feature-rich, AI-powered flashlight app with sound-reactive modes, Morse code generation, and intelligent mood lighting.",
+  "name": "Torch",
+  "description": "A high-performance flashlight app with strobe, SOS, and sound-reactive modes.",
   "requestFramePermissions": [
     "camera",
     "microphone"

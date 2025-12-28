@@ -1,23 +1,17 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { TorchMode, MoodConfig } from './types';
-import { getMoodConfig, generateMorseCode } from './services/geminiService';
+import { TorchMode } from './types';
 
 // Components
 import TorchButton from './components/TorchButton';
 import ModeSelector from './components/ModeSelector';
 import ColorLight from './components/ColorLight';
-import MorseInput from './components/MorseInput';
 import SoundReactiveVisualizer from './components/SoundReactiveVisualizer';
-import MoodInput from './components/MoodInput';
 
 const App: React.FC = () => {
   const [isActive, setIsActive] = useState(false);
   const [mode, setMode] = useState<TorchMode>(TorchMode.NORMAL);
   const [strobeSpeed, setStrobeSpeed] = useState(500);
-  const [morseText, setMorseText] = useState("");
-  const [moodConfig, setMoodConfig] = useState<MoodConfig | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [screenLightColor, setScreenLightColor] = useState("#ffffff");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -40,7 +34,6 @@ const App: React.FC = () => {
     setErrorMessage(null);
     stopExistingMedia();
 
-    // Strategy: Try the most specific constraints first, then fallback to generic
     const constraintSequences: MediaStreamConstraints[] = [
       { video: { facingMode: 'environment' } },
       { video: { facingMode: { ideal: 'environment' } } },
@@ -56,7 +49,6 @@ const App: React.FC = () => {
         if (stream) break;
       } catch (e) {
         lastError = e;
-        console.warn(`Camera constraint failed:`, constraints, e);
       }
     }
 
@@ -68,7 +60,7 @@ const App: React.FC = () => {
     } else {
       const msg = lastError?.name === 'NotAllowedError' 
         ? "Permission denied. Please allow camera access." 
-        : "No camera detected. Ensure your device has a camera.";
+        : "No camera detected.";
       setErrorMessage(msg);
       return null;
     }
@@ -83,9 +75,8 @@ const App: React.FC = () => {
     if (!trackRef.current) return;
 
     try {
-      // Check for torch support safely
       if (typeof trackRef.current.getCapabilities !== 'function') {
-        if (state) setErrorMessage("Flashlight control is not supported on this browser/device.");
+        if (state) setErrorMessage("Flashlight control not supported here.");
         return;
       }
 
@@ -95,7 +86,7 @@ const App: React.FC = () => {
           advanced: [{ torch: state }]
         } as any);
       } else if (state) {
-        setErrorMessage("Flashlight hardware not found on this camera.");
+        setErrorMessage("Flashlight hardware not found.");
       }
     } catch (e) {
       console.error("Torch toggle failed", e);
@@ -113,7 +104,6 @@ const App: React.FC = () => {
       return;
     }
 
-    // Mode Execution Logic
     if (mode === TorchMode.NORMAL) {
       toggleTorch(true);
     } else if (mode === TorchMode.STROBE) {
@@ -149,12 +139,12 @@ const App: React.FC = () => {
             if (mode !== TorchMode.SOUND_REACTIVE || !isActive) return;
             analyserRef.current?.getByteFrequencyData(dataArray);
             const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-            toggleTorch(average > 45); // Adjusted threshold
+            toggleTorch(average > 45);
             requestAnimationFrame(update);
           };
           update();
         } catch (err) {
-          setErrorMessage("Microphone access is required for Beat mode.");
+          setErrorMessage("Microphone access required for Beat mode.");
         }
       };
       setupAudio();
@@ -165,95 +155,34 @@ const App: React.FC = () => {
     };
   }, [isActive, mode, strobeSpeed]);
 
-  const handleMoodSubmit = async (prompt: string) => {
-    setIsProcessing(true);
-    setErrorMessage(null);
-    try {
-      const config = await getMoodConfig(prompt);
-      setMoodConfig(config);
-      setScreenLightColor(config.color);
-      setMode(TorchMode.MOOD);
-      setIsActive(true);
-    } catch (e) {
-      setErrorMessage("AI mood interpretation failed. Try a different mood.");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleMorseSubmit = async (text: string) => {
-    setIsProcessing(true);
-    setErrorMessage(null);
-    try {
-      const code = await generateMorseCode(text);
-      setMorseText(code);
-      setIsActive(true);
-      const symbols = code.split("");
-      let i = 0;
-      const playNext = async () => {
-        if (i >= symbols.length || mode !== TorchMode.MORSE || !isActive) {
-          toggleTorch(false);
-          return;
-        }
-        const s = symbols[i];
-        if (s === ".") {
-          await toggleTorch(true);
-          setTimeout(() => { toggleTorch(false); i++; setTimeout(playNext, 100); }, 200);
-        } else if (s === "-") {
-          await toggleTorch(true);
-          setTimeout(() => { toggleTorch(false); i++; setTimeout(playNext, 100); }, 600);
-        } else {
-          i++;
-          setTimeout(playNext, 400); // Word/Char space
-        }
-      };
-      playNext();
-    } catch (e) {
-      setErrorMessage("Morse translation service unavailable.");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   return (
-    <div className="min-h-screen flex flex-col items-center justify-between p-6 bg-slate-950 text-slate-100 transition-colors duration-1000 overflow-hidden relative"
-         style={{ 
-           backgroundColor: mode === TorchMode.MOOD && isActive ? moodConfig?.color + "08" : undefined,
-           boxShadow: mode === TorchMode.MOOD && isActive ? `inset 0 0 100px ${moodConfig?.color}22` : 'none'
-         }}>
+    <div className="min-h-screen flex flex-col items-center justify-between p-6 bg-slate-950 text-slate-100 transition-colors duration-1000 overflow-hidden relative">
       
-      {/* Header */}
       <header className="w-full max-w-md flex justify-between items-center py-4 z-20">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-sky-500 flex items-center justify-center neon-glow">
             <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14H11V21L20 10H13Z"/></svg>
           </div>
-          <h1 className="text-xl font-bold tracking-tight neon-text">Lumina AI</h1>
+          <h1 className="text-xl font-bold tracking-widest neon-text uppercase">Torch</h1>
         </div>
         <div className="px-3 py-1 rounded-full glass text-[10px] font-bold text-sky-400 border border-sky-500/30 tracking-widest uppercase">
           Pro
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 w-full max-w-md flex flex-col items-center justify-center gap-8 py-8 z-10">
         
         {errorMessage && (
-          <div className="w-full glass border-red-500/20 bg-red-500/10 px-4 py-3 rounded-xl text-center animate-bounce">
+          <div className="w-full glass border-red-500/20 bg-red-500/10 px-4 py-3 rounded-xl text-center animate-pulse">
             <p className="text-xs text-red-400 font-bold uppercase tracking-tight">{errorMessage}</p>
           </div>
         )}
 
         <div className="relative w-full aspect-square max-h-[280px] flex items-center justify-center">
-          {mode === TorchMode.MOOD && isActive && moodConfig && (
-            <div className="absolute inset-0 rounded-full animate-pulse blur-[100px]" style={{ backgroundColor: moodConfig.color, opacity: 0.3 }}></div>
-          )}
-          
           <TorchButton 
             isActive={isActive} 
             onClick={() => { setIsActive(!isActive); setErrorMessage(null); }} 
             mode={mode}
-            color={mode === TorchMode.MOOD ? moodConfig?.color : undefined}
           />
         </div>
 
@@ -273,14 +202,6 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {mode === TorchMode.MORSE && (
-            <MorseInput onSend={handleMorseSubmit} isProcessing={isProcessing} />
-          )}
-
-          {mode === TorchMode.MOOD && (
-            <MoodInput onSend={handleMoodSubmit} isProcessing={isProcessing} currentMood={moodConfig?.description} />
-          )}
-
           {mode === TorchMode.SOUND_REACTIVE && isActive && (
              <SoundReactiveVisualizer analyser={analyserRef.current} />
           )}
@@ -295,13 +216,12 @@ const App: React.FC = () => {
         <ModeSelector currentMode={mode} onModeChange={(m) => { setMode(m); setIsActive(false); setErrorMessage(null); }} />
       </nav>
 
-      {/* Screen Illumination Overlay */}
-      {(mode === TorchMode.NORMAL || mode === TorchMode.MOOD) && isActive && (
+      {mode === TorchMode.NORMAL && isActive && (
         <div 
           className="fixed inset-0 pointer-events-none transition-opacity duration-1000 z-0"
           style={{ 
-            backgroundColor: mode === TorchMode.NORMAL ? screenLightColor : moodConfig?.color,
-            opacity: mode === TorchMode.NORMAL ? 0.08 : 0.05
+            backgroundColor: screenLightColor,
+            opacity: 0.08
           }}
         />
       )}

@@ -6,13 +6,11 @@ interface TorchButtonProps {
   isActive: boolean;
   onClick: () => void;
   mode: TorchMode;
-  color?: string;
 }
 
-const TorchButton: React.FC<TorchButtonProps> = ({ isActive, onClick, mode, color }) => {
+const TorchButton: React.FC<TorchButtonProps> = ({ isActive, onClick, mode }) => {
   const getGlowColor = () => {
     if (!isActive) return 'rgba(255, 255, 255, 0.1)';
-    if (color) return color;
     switch (mode) {
       case TorchMode.SOS: return '#ef4444';
       case TorchMode.STROBE: return '#f59e0b';
@@ -51,7 +49,6 @@ const TorchButton: React.FC<TorchButtonProps> = ({ isActive, onClick, mode, colo
         </span>
       </div>
 
-      {/* Orbit Rings */}
       <div className={`absolute inset-0 rounded-full border border-white/5 animate-[spin_10s_linear_infinite] ${isActive ? 'opacity-100' : 'opacity-0'}`}></div>
       <div className={`absolute -inset-4 rounded-full border border-white/5 animate-[spin_15s_linear_reverse_infinite] ${isActive ? 'opacity-100' : 'opacity-0'}`}></div>
     </button>
