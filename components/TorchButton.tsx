@@ -9,8 +9,8 @@ interface TorchButtonProps {
 }
 
 const TorchButton: React.FC<TorchButtonProps> = ({ isActive, onClick, mode }) => {
-  const getGlowColor = () => {
-    if (!isActive) return 'rgba(255, 255, 255, 0.1)';
+  const getAccentColor = () => {
+    if (!isActive) return '#334155';
     switch (mode) {
       case TorchMode.SOS: return '#ef4444';
       case TorchMode.STROBE: return '#f59e0b';
@@ -20,38 +20,47 @@ const TorchButton: React.FC<TorchButtonProps> = ({ isActive, onClick, mode }) =>
   };
 
   return (
-    <button
-      onClick={onClick}
-      className={`relative w-48 h-48 rounded-full flex items-center justify-center transition-all duration-500 z-10 ${
-        isActive ? 'scale-105' : 'scale-100'
-      }`}
-      style={{
-        background: isActive ? `radial-gradient(circle, ${getGlowColor()}44 0%, transparent 70%)` : 'transparent'
-      }}
-    >
+    <div className="relative flex items-center justify-center">
       <div 
-        className={`w-36 h-36 rounded-full glass border-2 flex flex-col items-center justify-center gap-2 shadow-2xl transition-all duration-300 ${
-          isActive ? 'border-white/40 neon-glow' : 'border-white/10'
+        className={`absolute inset-0 rounded-full blur-[60px] transition-all duration-1000 ${isActive ? 'opacity-20' : 'opacity-0'}`}
+        style={{ backgroundColor: getAccentColor() }}
+      />
+      
+      <button
+        onClick={onClick}
+        className={`relative w-52 h-52 rounded-full glass flex items-center justify-center transition-all duration-500 active:scale-90 shadow-2xl border ${
+          isActive ? 'scale-105 border-white/20' : 'scale-100 border-white/5'
         }`}
-        style={{
-          boxShadow: isActive ? `0 0 40px ${getGlowColor()}66` : 'none',
-          borderColor: isActive ? getGlowColor() : undefined
-        }}
       >
-        <svg 
-          className={`w-12 h-12 transition-colors duration-300 ${isActive ? 'text-white' : 'text-slate-600'}`}
-          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}
+        <div 
+          className={`w-40 h-40 rounded-full flex flex-col items-center justify-center gap-3 transition-all duration-700 ${
+            isActive ? 'bg-white/5' : 'bg-transparent'
+          }`}
+          style={{ 
+            boxShadow: isActive ? `inset 0 0 40px ${getAccentColor()}15` : 'none'
+          }}
         >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 22.5 12 13.5H3.75z" />
-        </svg>
-        <span className={`text-xs font-bold tracking-widest uppercase transition-colors duration-300 ${isActive ? 'text-white' : 'text-slate-600'}`}>
-          {isActive ? 'Active' : 'Power'}
-        </span>
-      </div>
-
-      <div className={`absolute inset-0 rounded-full border border-white/5 animate-[spin_10s_linear_infinite] ${isActive ? 'opacity-100' : 'opacity-0'}`}></div>
-      <div className={`absolute -inset-4 rounded-full border border-white/5 animate-[spin_15s_linear_reverse_infinite] ${isActive ? 'opacity-100' : 'opacity-0'}`}></div>
-    </button>
+          <svg 
+            className="w-16 h-16 transition-all duration-700"
+            style={{ 
+              color: getAccentColor(), 
+              filter: isActive ? `drop-shadow(0 0 15px ${getAccentColor()}88)` : 'none',
+              transform: isActive ? 'scale(1.1)' : 'scale(1)'
+            }}
+            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={0.75}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 22.5 12 13.5H3.75z" />
+          </svg>
+        </div>
+        
+        {isActive && (
+          <div 
+            className="absolute inset-2 rounded-full border border-white/10 animate-ring"
+            style={{ borderColor: `${getAccentColor()}22` }}
+          />
+        )}
+      </button>
+    </div>
   );
 };
 

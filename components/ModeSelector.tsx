@@ -16,21 +16,21 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ currentMode, onModeChange }
   ];
 
   return (
-    <div className="flex overflow-x-auto gap-2 p-2 no-scrollbar glass rounded-3xl items-center justify-around">
+    <div className="flex gap-4 p-2 glass rounded-[32px] items-center justify-between px-4">
       {modes.map((mode) => (
         <button
           key={mode.id}
           onClick={() => onModeChange(mode.id)}
-          className={`flex flex-col items-center justify-center flex-1 py-2 px-1 rounded-2xl transition-all duration-300 ${
+          className={`flex flex-col items-center justify-center w-14 h-14 rounded-[22px] transition-all duration-500 ${
             currentMode === mode.id 
-              ? 'bg-sky-500/20 text-sky-400 ring-1 ring-sky-500/50' 
-              : 'text-slate-500 hover:bg-white/5'
+              ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20' 
+              : 'text-slate-600 hover:text-slate-400'
           }`}
+          aria-label={mode.label}
         >
-          <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
              <path strokeLinecap="round" strokeLinejoin="round" d={mode.icon} />
           </svg>
-          <span className="text-[10px] font-bold uppercase tracking-tighter">{mode.label}</span>
         </button>
       ))}
     </div>

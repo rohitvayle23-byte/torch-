@@ -1,6 +1,6 @@
 {
-  "name": "Torch",
-  "description": "A high-performance flashlight app with strobe, SOS, and sound-reactive modes.",
+  "name": "Light",
+  "description": "A high-performance minimalist utility for illumination and signaling.",
   "requestFramePermissions": [
     "camera",
     "microphone"
