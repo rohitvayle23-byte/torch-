@@ -6,15 +6,18 @@ interface TorchButtonProps {
   isActive: boolean;
   onClick: () => void;
   mode: TorchMode;
+  discoColor?: string;
 }
 
-const TorchButton: React.FC<TorchButtonProps> = ({ isActive, onClick, mode }) => {
+const TorchButton: React.FC<TorchButtonProps> = ({ isActive, onClick, mode, discoColor }) => {
   const getAccentColor = () => {
-    if (!isActive) return '#334155';
+    if (!isActive && mode !== TorchMode.DISCO) return '#334155';
     switch (mode) {
       case TorchMode.SOS: return '#ef4444';
       case TorchMode.STROBE: return '#f59e0b';
       case TorchMode.SOUND_REACTIVE: return '#10b981';
+      case TorchMode.DISCO: return discoColor || '#a855f7';
+      case TorchMode.MORSE: return '#ec4899';
       default: return '#0ea5e9';
     }
   };
@@ -22,18 +25,18 @@ const TorchButton: React.FC<TorchButtonProps> = ({ isActive, onClick, mode }) =>
   return (
     <div className="relative flex items-center justify-center">
       <div 
-        className={`absolute inset-0 rounded-full blur-[60px] transition-all duration-1000 ${isActive ? 'opacity-20' : 'opacity-0'}`}
+        className={`absolute inset-0 rounded-full blur-[60px] transition-all duration-500 ${isActive || mode === TorchMode.DISCO ? 'opacity-20' : 'opacity-0'}`}
         style={{ backgroundColor: getAccentColor() }}
       />
       
       <button
         onClick={onClick}
-        className={`relative w-52 h-52 rounded-full glass flex items-center justify-center transition-all duration-500 active:scale-90 shadow-2xl border ${
-          isActive ? 'scale-105 border-white/20' : 'scale-100 border-white/5'
+        className={`relative w-48 h-48 rounded-full glass flex items-center justify-center transition-all duration-300 shadow-2xl border ${
+          isActive || mode === TorchMode.DISCO ? 'border-white/20' : 'border-white/5'
         }`}
       >
         <div 
-          className={`w-40 h-40 rounded-full flex flex-col items-center justify-center gap-3 transition-all duration-700 ${
+          className={`w-36 h-36 rounded-full flex flex-col items-center justify-center gap-3 transition-all duration-500 ${
             isActive ? 'bg-white/5' : 'bg-transparent'
           }`}
           style={{ 
@@ -41,11 +44,10 @@ const TorchButton: React.FC<TorchButtonProps> = ({ isActive, onClick, mode }) =>
           }}
         >
           <svg 
-            className="w-16 h-16 transition-all duration-700"
+            className="w-14 h-14 transition-all duration-500"
             style={{ 
               color: getAccentColor(), 
-              filter: isActive ? `drop-shadow(0 0 15px ${getAccentColor()}88)` : 'none',
-              transform: isActive ? 'scale(1.1)' : 'scale(1)'
+              filter: isActive || mode === TorchMode.DISCO ? `drop-shadow(0 0 15px ${getAccentColor()}88)` : 'none'
             }}
             fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={0.75}
           >

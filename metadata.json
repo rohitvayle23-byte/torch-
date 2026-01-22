@@ -1,6 +1,6 @@
 {
   "name": "Light",
-  "description": "A high-performance minimalist utility for illumination and signaling.",
+  "description": "Professional-grade flashlight utility with signaling and reactive modes.",
   "requestFramePermissions": [
     "camera",
     "microphone"
