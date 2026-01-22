@@ -40,9 +40,9 @@
       box-sizing: border-box;
     }
     @keyframes pulse-ring {
-      0% { transform: scale(0.95); opacity: 0.5; }
-      50% { transform: scale(1.05); opacity: 0.2; }
-      100% { transform: scale(0.95); opacity: 0.5; }
+      0% { opacity: 0.5; border-width: 1px; }
+      50% { opacity: 0.2; border-width: 4px; }
+      100% { opacity: 0.5; border-width: 1px; }
     }
     .animate-ring {
       animation: pulse-ring 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;

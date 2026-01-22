@@ -17,7 +17,7 @@ const ColorLight: React.FC<ColorLightProps> = ({ color, onChange }) => {
           <button
             key={c}
             onClick={() => onChange(c)}
-            className={`w-10 h-10 rounded-full border-2 transition-transform ${color === c ? 'scale-110 border-white' : 'border-transparent'}`}
+            className={`w-10 h-10 rounded-full border-2 transition-all ${color === c ? 'border-white' : 'border-transparent'}`}
             style={{ backgroundColor: c }}
           />
         ))}

@@ -13,7 +13,7 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ currentMode, onModeChange }
     { id: TorchMode.STROBE, icon: 'M13 2L3 14h9v8l10-12h-9l9-10z', color: 'text-amber-400' },
     { id: TorchMode.SOUND_REACTIVE, icon: 'M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3', color: 'text-emerald-400' },
     { id: TorchMode.DISCO, icon: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 100 10 5 5 0 000-10z', color: 'text-purple-400' },
-    { id: TorchMode.MORSE, icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z', color: 'text-pink-400' }
+    { id: TorchMode.MORSE, icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863/0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z', color: 'text-pink-400' }
   ];
 
   return (
